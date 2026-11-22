@@ -36,24 +36,32 @@ export async function checkSig(action: string, id: string, s: string | null) {
 }
 
 // ---------- ntfy push (iPhone app "ntfy", subscribed to a private random topic) ----------
-export async function push(title: string, message: string, actions: string[] = [], click?: string) {
-  const headers: Record<string, string> = { Title: title.replace(/[^\x20-\x7E]/g, "") };
-  if (actions.length) headers["Actions"] = actions.join("; ");
-  if (click) headers["Click"] = click;
-  const r = await fetch(`https://ntfy.sh/${await cfg("NTFY_TOPIC")}`, { method: "POST", headers, body: message.slice(0, 3500) });
-  if (!r.ok) throw new Error(`ntfy ${r.status}: ${await r.text()}`);
+// Sent from the database with pg_net, not from the function: ntfy.sh rate-limits per IP, and the
+// function servers' shared IPs hit its daily quota. pg_net sends right after this statement commits.
+export type Action = { action: "view" | "http"; label: string; url: string; method?: string; clear?: boolean };
+export async function push(title: string, message: string, actions: Action[] = [], click?: string) {
+  const payload = { topic: await cfg("NTFY_TOPIC"), title, message: message.slice(0, 3500), ...(click ? { click } : {}), ...(actions.length ? { actions } : {}) };
+  await sql`select net.http_post(url := 'https://ntfy.sh/', body := (${JSON.stringify(payload)}::text)::jsonb,
+            headers := '{"content-type":"application/json"}'::jsonb)`;
 }
 
-// ---------- small HTML page ----------
-export function page(title: string, body: string, status = 200) {
-  return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title><style>body{font:16px/1.5 -apple-system,Helvetica,Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px 16px;background:#0f1115;color:#eef1f5}
-h1{font-size:22px}textarea{width:100%;min-height:340px;font:15px/1.5 -apple-system,Helvetica,Arial,sans-serif;background:#171a21;color:#eef1f5;border:1px solid #2a2f3a;border-radius:10px;padding:12px}
-button{font:600 16px -apple-system,Helvetica,Arial,sans-serif;padding:12px 18px;border-radius:10px;border:0;margin:10px 8px 0 0;cursor:pointer}
-.go{background:#41d6ba;color:#06231d}.alt{background:#2a2f3a;color:#eef1f5}a{color:#6d8dff}.muted{color:#9aa3ad;font-size:14px}</style>
-<h1>${title}</h1>${body}`, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+// ---------- responses ----------
+// Supabase serves function HTML as text/plain, so people-facing pages live on the site:
+// result pages are a redirect to SITE#t=..&m=.., and the edit form is SITE?a=edit&id&s (it calls li-post as JSON).
+export const SITE = "https://rutulpatel.dev/autopost";
+const CORS = { "access-control-allow-origin": "https://rutulpatel.dev", "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "content-type", "vary": "origin" };
+export const preflight = () => new Response(null, { status: 204, headers: CORS });
+export function json(o: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(o), { status, headers: { ...CORS, "content-type": "application/json", "cache-control": "no-store" } });
 }
-export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+export function show(title: string, message = "", error = false) {
+  const h = new URLSearchParams({ t: title, m: message, ...(error ? { e: "1" } : {}) });
+  return new Response(null, { status: 303, headers: { location: `${SITE}#${h}`, "cache-control": "no-store" } });
+}
+export async function editUrl(id: number) {
+  return `${SITE}?a=edit&id=${id}&s=${await hmac(`edit:${id}`)}`;
+}
 
 // ---------- LinkedIn ----------
 // LinkedIn's "little text" format reserves | { } @ [ ] ( ) < > # \ * _ ~ ; hashtags become {hashtag|\#|tag}.

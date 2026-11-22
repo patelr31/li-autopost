@@ -20,11 +20,15 @@ published without a tap.
    - warns about a week before the LinkedIn login expires (logins last 60 days), with a
      one-tap re-login link.
 3. **Notifications** go through [ntfy](https://ntfy.sh), a free iPhone app with action
-   buttons, using a private random topic.
+   buttons, using a private random topic. They are sent from the database with `pg_net`,
+   because ntfy.sh limits messages per IP and the shared edge-function IPs hit that limit.
 4. **Actions:** `li-post` handles the buttons. Every link is HMAC-signed for that post
    and action. Approve publishes through LinkedIn's official
    [Posts API](https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api)
-   (`w_member_social`). Edit opens a form to change the text first.
+   (`w_member_social`) as the member, not a company page. Approve and Skip are POST-only, so
+   opening a link can never publish. Edit opens `rutulpatel.dev/autopost`: Supabase serves
+   function HTML as plain text, so the edit form and result pages live on the site and talk to
+   `li-post` as JSON.
 5. **Login:** `li-auth` handles the one-time LinkedIn OAuth login (OpenID Connect plus
    `w_member_social`).
 

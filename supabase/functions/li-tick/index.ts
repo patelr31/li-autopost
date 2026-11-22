@@ -4,7 +4,7 @@
 //   3. Last post less than GAP_DAYS ago -> wait
 //   4. Otherwise -> next queued post becomes "pending" and goes to the phone with Approve / Edit / Skip
 //   5. Queue at or below LOW_WATER -> "running low" reminder (at most every 3 days)
-import { cfg, meta, push, signedUrl, sql } from "./lib.ts";
+import { cfg, editUrl, meta, push, signedUrl, sql } from "./lib.ts";
 
 const GAP_DAYS = Number(Deno.env.get("LI_GAP_DAYS") ?? 2);
 const LOW_WATER = Number(Deno.env.get("LI_LOW_WATER") ?? 2);
@@ -53,10 +53,10 @@ Deno.serve(async (req) => {
 
 async function offer(id: number, reminder: boolean) {
   const [p] = await sql`update li_posts set status = 'pending', notified_at = now() where id = ${id} returning title, body`;
-  const [approve, edit, skip] = await Promise.all([signedUrl("li-post", "approve", id), signedUrl("li-post", "edit", id), signedUrl("li-post", "skip", id)]);
+  const [approve, edit, skip] = await Promise.all([signedUrl("li-post", "approve", id), editUrl(id), signedUrl("li-post", "skip", id)]);
   await push(`${reminder ? "Reminder: " : ""}LinkedIn post ready: ${p.title}`, p.body, [
-    `http, Approve & post, ${approve}, method=POST, clear=true`,
-    `view, Edit, ${edit}`,
-    `http, Skip, ${skip}, method=POST, clear=true`,
+    { action: "http", label: "Approve & post", url: approve, method: "POST", clear: true },
+    { action: "view", label: "Edit", url: edit },
+    { action: "http", label: "Skip", url: skip, method: "POST", clear: true },
   ], edit);
 }
