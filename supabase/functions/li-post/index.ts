@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     const done = await sql`update li_posts set body = ${body} where id = ${id} and status <> 'posted' returning id`;
     if (!done.length) return json({ error: true, title: "Can't edit", message: "That post doesn't exist or is already on LinkedIn." }, 409);
     if (f.go === "post") return publish(id);
-    return json({ title: "Saved", message: "Saved. Tap \"Save and post\" when you're ready." });
+    return json({ title: "Saved", message: "Saved. It goes out as scheduled at 9 am New York time." });
   }
   const [p] = await sql`select title, body, status from li_posts where id = ${id}`;
   if (!p) return json({ error: true, title: "Not found", message: "No such post." }, 404);

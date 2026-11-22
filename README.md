@@ -4,17 +4,24 @@
 goes unseen. **Who would pay:** freelancers, small studios and job seekers who want a
 steady, reviewed posting rhythm without a social-media tool's monthly fee.
 
-It keeps a queue of drafted LinkedIn posts. Every 2 days it sends the next one to my
-iPhone as a notification with **Approve & post**, **Edit** and **Skip** buttons. Nothing is
-published without a tap.
+It keeps a queue of drafted LinkedIn posts and publishes the next one at 9 am New York time
+every 2 days, from my own profile. After each post my iPhone gets a notification with a link
+to it and a heads-up of the next post, with optional **Edit next** and **Skip next** buttons.
+Doing nothing is fine; the schedule never waits on me.
+
+Every draft goes through `scripts/check.py` before it is queued: spelling (macOS dictionary
+plus a common-typo list), phrases that read as AI-written, UK/US spelling mix, doubled words,
+links that don't load, length and hashtag count.
 
 ## Flow
 
 1. **The queue:** drafts sit in `li_posts` (Supabase). The first 8 come from
    `scripts/drafts.json`.
-2. **The daily check:** `li-tick` runs once a day, triggered by pg_cron, and:
-   - offers the next post if none is waiting and the last post was 2 or more days ago;
-   - reminds me once if I haven't acted on a post within 2 days;
+2. **The daily run:** `li-tick` runs at 9 am New York time (pg_cron fires at 13:00 and 14:00 UTC
+   and acts only on the one that is 9 am locally, so daylight saving needs no change). It:
+   - publishes the next queued post if the last one was 2 or more days ago;
+   - checks the post's links first and mentions any that don't load, but still posts;
+   - on a LinkedIn error, notifies me and retries at the next run;
    - warns when the queue is down to 2 posts or fewer ("running low, ask Claude to draft
      more");
    - warns about a week before the LinkedIn login expires (logins last 60 days), with a
