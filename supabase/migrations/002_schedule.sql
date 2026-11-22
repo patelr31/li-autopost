@@ -19,5 +19,5 @@ select cron.schedule(
 -- Posting slots and skipped dates (editable any time, no redeploy needed):
 insert into public.li_meta (key, value) values
   ('post_slots', '{"2":12,"3":16,"5":15}'),
-  ('skip_dates', '2026-11-25,2026-11-26,2026-11-27,2026-12-24,2026-12-25,2026-12-26,2026-12-27,2026-12-28,2026-12-29,2026-12-30,2026-12-31,2027-01-01')
+  ('skip_dates', '2026-11-24,2026-11-25,2026-11-26,2026-11-27,2026-12-24,2026-12-25,2026-12-26,2026-12-27,2026-12-28,2026-12-29,2026-12-30,2026-12-31,2027-01-01')
 on conflict (key) do update set value = excluded.value, updated_at = now();
