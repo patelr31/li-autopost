@@ -8,11 +8,20 @@ const env = (k: string) => {
   return v;
 };
 export const BASE = () => `${env("SUPABASE_URL")}/functions/v1`;
+
+// Config: a function secret if set, else the li_meta row "cfg_<name>" (generated in SQL, never in this repo).
+const cache: Record<string, string> = {};
+export async function cfg(k: string) {
+  if (cache[k]) return cache[k];
+  const v = Deno.env.get(k) ?? (await sql`select value from li_meta where key = ${"cfg_" + k}`)[0]?.value;
+  if (!v) throw new Error(`missing config ${k}`);
+  return (cache[k] = v);
+}
 export const LINKEDIN_VERSION = () => Deno.env.get("LINKEDIN_VERSION") ?? "202609";
 
 // ---------- signed links (HMAC-SHA256 over "action:id") ----------
 async function hmac(msg: string) {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env("LI_LINK_SECRET")),
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(await cfg("LI_LINK_SECRET")),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
   return [...new Uint8Array(sig)].slice(0, 16).map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -31,7 +40,7 @@ export async function push(title: string, message: string, actions: string[] = [
   const headers: Record<string, string> = { Title: title.replace(/[^\x20-\x7E]/g, "") };
   if (actions.length) headers["Actions"] = actions.join("; ");
   if (click) headers["Click"] = click;
-  const r = await fetch(`https://ntfy.sh/${env("NTFY_TOPIC")}`, { method: "POST", headers, body: message.slice(0, 3500) });
+  const r = await fetch(`https://ntfy.sh/${await cfg("NTFY_TOPIC")}`, { method: "POST", headers, body: message.slice(0, 3500) });
   if (!r.ok) throw new Error(`ntfy ${r.status}: ${await r.text()}`);
 }
 

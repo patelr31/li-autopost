@@ -4,7 +4,7 @@
 //   3. Last post less than GAP_DAYS ago -> wait
 //   4. Otherwise -> next queued post becomes "pending" and goes to the phone with Approve / Edit / Skip
 //   5. Queue at or below LOW_WATER -> "running low" reminder (at most every 3 days)
-import { meta, push, signedUrl, sql } from "./lib.ts";
+import { cfg, meta, push, signedUrl, sql } from "./lib.ts";
 
 const GAP_DAYS = Number(Deno.env.get("LI_GAP_DAYS") ?? 2);
 const LOW_WATER = Number(Deno.env.get("LI_LOW_WATER") ?? 2);
@@ -12,7 +12,7 @@ const DAY = 86400000;
 const since = (iso: string | null) => (iso ? (Date.now() - new Date(iso).getTime()) / DAY : Infinity);
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-tick-key") !== Deno.env.get("LI_TICK_KEY")) return new Response("forbidden", { status: 403 });
+  if (req.headers.get("x-tick-key") !== (await cfg("LI_TICK_KEY"))) return new Response("forbidden", { status: 403 });
   const log: string[] = [];
   const loginUrl = await signedUrl("li-auth", "start", "login");
 

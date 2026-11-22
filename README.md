@@ -33,9 +33,11 @@ published without a tap.
 - **Official API only,** no browser automation, so the LinkedIn account isn't put at risk.
 - **Text formatting:** posts use LinkedIn's "little text" format. Reserved characters are
   escaped, and `#Tags` become real hashtags.
-- **Secrets stay in Supabase:** `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`,
-  `LI_LINK_SECRET`, `LI_TICK_KEY` and `NTFY_TOPIC` are function secrets and are never in
-  this repo.
+- **Secrets stay in Supabase, never in this repo:** `LINKEDIN_CLIENT_SECRET` is a function
+  secret entered in the dashboard. `LI_LINK_SECRET`, `LI_TICK_KEY` and `NTFY_TOPIC` were
+  generated in SQL and live in `li_meta` as `cfg_*` rows (RLS, no policies);
+  `LINKEDIN_CLIENT_ID` is stored the same way. A function secret with the same name
+  overrides a row.
 - **Database:** the tables have row-level security on with no policies, so only the
   functions can touch them.
 - **Text-only for now;** image uploads are a next step.

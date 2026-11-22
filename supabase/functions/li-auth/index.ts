@@ -2,14 +2,14 @@
 //   GET ?a=start&id=login&s=<sig>  -> redirect to LinkedIn's consent screen
 //   GET ?code=...&state=...         -> LinkedIn redirects back here; store the token
 // Deployed with verify_jwt=false (opened from a phone notification).
-import { checkSig, esc, meta, page, push, sql, BASE } from "./lib.ts";
+import { cfg, checkSig, esc, meta, page, push, sql, BASE } from "./lib.ts";
 
 const SCOPES = "openid profile w_member_social";
 
 Deno.serve(async (req) => {
   const u = new URL(req.url);
   const redirect = `${BASE()}/li-auth`;
-  const clientId = Deno.env.get("LINKEDIN_CLIENT_ID")!, secret = Deno.env.get("LINKEDIN_CLIENT_SECRET")!;
+  const clientId = await cfg("LINKEDIN_CLIENT_ID"), secret = Deno.env.get("LINKEDIN_CLIENT_SECRET") ?? "";
 
   if (u.searchParams.get("a") === "start") {
     if (!(await checkSig("start", u.searchParams.get("id") ?? "", u.searchParams.get("s")))) return page("Not allowed", "<p>Bad link.</p>", 403);
