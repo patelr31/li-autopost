@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
   if (a === "approve") return publish(id);
   if (a === "skip") {
     await sql`update li_posts set status = 'skipped' where id = ${id} and status in ('queued','pending')`;
-    return json({ title: "Skipped", message: "The next post will be offered at the next daily check." });
+    return json({ title: "Skipped", message: "It won't be posted. The next one takes its slot." });
   }
 
   // edit
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     const done = await sql`update li_posts set body = ${body} where id = ${id} and status <> 'posted' returning id`;
     if (!done.length) return json({ error: true, title: "Can't edit", message: "That post doesn't exist or is already on LinkedIn." }, 409);
     if (f.go === "post") return publish(id);
-    return json({ title: "Saved", message: "Saved. It goes out as scheduled at 9 am New York time." });
+    return json({ title: "Saved", message: "Saved. It goes out at its scheduled time." });
   }
   const [p] = await sql`select title, body, status from li_posts where id = ${id}`;
   if (!p) return json({ error: true, title: "Not found", message: "No such post." }, 404);

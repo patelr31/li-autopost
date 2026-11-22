@@ -4,10 +4,12 @@
 goes unseen. **Who would pay:** freelancers, small studios and job seekers who want a
 steady, reviewed posting rhythm without a social-media tool's monthly fee.
 
-It keeps a queue of drafted LinkedIn posts and publishes the next one at 9 am New York time
-every 2 days, from my own profile. After each post my iPhone gets a notification with a link
-to it and a heads-up of the next post, with optional **Edit next** and **Skip next** buttons.
-Doing nothing is fine; the schedule never waits on me.
+It keeps a queue of drafted LinkedIn posts and publishes them from my own profile three times a
+week: **Tuesday 12 pm, Wednesday 4 pm and Friday 3 pm ET**. These slots come from Buffer's 2026
+analysis of 4.8M LinkedIn posts (best: Wed 4 pm, Fri 3–4 pm; no weekends). Holidays such as
+Thanksgiving week and Dec 24–Jan 1 are skipped. After each post my iPhone gets a notification
+with a link to it and a heads-up of the next post, with optional **Edit next** and **Skip next**
+buttons. Doing nothing is fine; the schedule never waits on me.
 
 Every draft goes through `scripts/check.py` before it is queued: spelling (macOS dictionary
 plus a common-typo list), phrases that read as AI-written, UK/US spelling mix, doubled words,
@@ -17,11 +19,12 @@ links that don't load, length and hashtag count.
 
 1. **The queue:** drafts sit in `li_posts` (Supabase). The first 8 come from
    `scripts/drafts.json`.
-2. **The daily run:** `li-tick` runs at 9 am New York time (pg_cron fires at 13:00 and 14:00 UTC
-   and acts only on the one that is 9 am locally, so daylight saving needs no change). It:
-   - publishes the next queued post if the last one was 2 or more days ago;
+2. **The hourly check:** `li-tick` runs every hour and acts only at a posting slot. Slots
+   (`post_slots`, New York weekday to hour) and skipped dates (`skip_dates`) live in `li_meta`,
+   so they can change without a redeploy, and daylight saving needs no change. At a slot it:
+   - publishes the next queued post (never two within 12 hours);
    - checks the post's links first and mentions any that don't load, but still posts;
-   - on a LinkedIn error, notifies me and retries at the next run;
+   - on a LinkedIn error, notifies me and retries at the next slot;
    - warns when the queue is down to 2 posts or fewer ("running low, ask Claude to draft
      more");
    - warns about a week before the LinkedIn login expires (logins last 60 days), with a
